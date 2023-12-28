@@ -1,0 +1,235 @@
+<!--
+ * @Author: czqczqzzzzzz(czq)
+ * @Email: tenchenzhengqing@qq.com
+ * @Date: 2023-09-06 11:29:00
+ * @LastEditors: error: git config user.name & please set dead value or install git
+ * @LastEditTime: 2023-12-21 14:57:27
+ * @FilePath: \boya_upload_test_file_sys\templates\index.html
+ * @Description: html文件
+ * 
+ * Copyright (c) by czqczqzzzzzz(czq), All Rights Reserved.
+-->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>测试文件上传系统</title>
+<link rel="shortcut icon" href="../static/favicon.ico" type="image/x-icon" />
+<link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+<!-- 进度条组件 -->
+<script src="../static/nprogress.js"></script>
+<link rel="stylesheet" href="../static/nprogress.css">
+
+<script src="{{ url_for('static', filename="socketio.js") }}"></script>
+<script src="{{ url_for('static', filename="marked.min.js") }}"></script>
+
+</head>
+
+
+<body>
+
+
+
+<h1 class="main-title">测试文件上传系统</h1>
+<form method="post" enctype="multipart/form-data">
+    <label class="main-title" for="files">选择单个或多个文件：</label>
+    <div id="fileInputs">
+        <div class="inputWrapper">
+            <input type="file" id="files" name="files" multiple/>
+            <button type="button" id="deleteChooseForFile" onclick="deleteButtonOnClickForFile(this)">删除选择项</button>
+        </div>
+    </div>
+    <button type="button" onclick="addInputForFile()" class="addInput">+</button>
+
+    <!-- <button type="button" onclick="clearInput('files')">清除选择</button><br/> -->
+
+    <br>
+    <label class="main-title" for="folder">选择整个文件夹中的所有文件：</label>
+    <div id="folderInputs">
+        <div class="inputWrapper">
+            <input type="file" id="folder" name="folder" webkitdirectory directory multiple>
+            <button type="button" id="deleteChooseForFolder" onclick="deleteButtonOnClickForFolder(this)">删除选择项</button>
+        </div>
+    </div>
+    <button type="button" onclick="addInputForFolder()" class="addInput">+</button>
+
+    <!-- <button type="button" onclick="clearInput('folder')">清除选择</button><br> -->
+
+    <div>
+        <div class="main-title" id="selectText">选择分析脚本</div>
+    </div>
+    <div class="flex-container"> 
+        <select id="scriptSelectorForChoose" name="scriptSelectorForChoose">
+            {% for script in py_scripts %}
+            <option value="{{ script }}" {% if script == selected_script_for_choose %}selected{% endif %}>{{ script }}</option>
+            {% endfor %}
+        </select>
+        <div class="button-container">
+            <input onclick="uploadFilesAndFolders(event)" type="submit" value="根据选择来上传文件/文件夹"/>
+        </div>
+    </div>
+
+    <hr class="q-bounce-divider">
+
+    <label class="main-title" for="manualFilePath">手动输入网盘路径（处理后的文件会直接在网盘生成）：</label>
+    <input type="text" id="manualFilePath" placeholder="请输入文件/文件夹的完整路径" />
+    
+    <div>
+        <div class="main-title" id="selectText">选择分析脚本</div>
+    </div>
+    <div class="flex-container">
+        <select id="scriptSelectorForPath" name="scriptSelectorForPath">
+            {% for script in py_scripts %}
+            <option value="{{ script }}" {% if script == selected_script_for_path %}selected{% endif %}>{{ script }}</option>
+            {% endfor %}
+        </select>
+        <div class="button-container">
+            <button class="submit-button" onclick="uploadUsingPath(event)">根据路径来上传文件/文件夹</button>
+        </div>
+    </div>
+</form>
+
+{% if log_files %}
+<div class="back_style">
+    <h3 class="main-title">下载生成的文件以及日志:</h3>
+    {% for log_file in log_files %}
+    <a href="{{ url_for('download_log', filename=log_file) }}" data-filename="{{log_file.split('/')[-1]}}" data-filetype="{{ log_file.split('.')[-1] }}" download></a><br>
+    {% endfor %}
+    <button id="clearFilesBtn" class="back-index-btn">清除输出文件并定向到主页</button>
+</div>
+{% endif %}
+
+{% if uploaded_files %}
+<div class="back_style">
+    <h3 class="main-title" style="margin-bottom: 0;">上传成功的文件或文件夹（更多上传以及生成文件的历史可在右侧查看）:</h3>
+    <ul class="uploaded-files-list">
+        {% for file in uploaded_files %}
+            <!-- 根据文件名是否包含'.'来判断它是文件还是文件夹 -->
+            {% if '.' in file %}
+                <li class="file">{{ file }}</li>
+            {% else %}
+                <li class="folder">{{ file }}</li>
+            {% endif %}
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="back_style">
+    <h2 class="main-title" style="font-size: 1.5em;">实时终端输出</h2>
+    <div id="console_outputs"></div>
+</div>
+
+<div style="text-align: center; opacity: 0.5; font-size: small;"> Version 2.0.2 </div>
+
+<!-- Back to Top Button -->
+<div id="back-to-top" class="back-to-top">
+    <i class="fas fa-arrow-to-top"></i>
+</div>
+
+<div id="go-to-bottom" class="go-to-bottom">
+    <i class="fas fa-arrow-to-bottom"></i>
+</div>
+
+{% if no_files %}
+    <p class="error-message">您没有上传任何文件或文件夹。</p>
+{% endif %}
+
+<!-- 毛玻璃效果 -->
+<div id="overlay" style="display:none;"></div>
+
+<!-- 对话框 -->
+<div id="uploadDialog">
+    <h1 class="main-title">管理分析脚本</h1>
+    <div>
+        <label for="scriptUploadInput">上传新脚本：</label>
+        <input type="file" id="newScripts" multiple>
+    </div>
+
+    <hr class="q-bounce-divider">
+
+    <div id="scriptList">
+        {% for script in py_scripts %}
+        <div class="script-item">
+            {{ script }}
+            <span class="delete-script" onclick="deleteScript('{{ script }}')">移除脚本</span>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="dialog-buttons">
+        <button class="close-button" onclick="closeDialog(dialog)">关闭</button>
+        <button class="submit-script" onclick="submitChanges()">保存更改</button>
+    </div>
+</div>
+
+<!-- PDF 对话框 -->
+<div id="pdfDialog" style="display:none;">
+    <iframe id="pdfContainer" style="width: 100%; height: 90%;"></iframe>
+    <button class="close-button" style="margin: auto; margin-top: 30px;" id="closeInstruction" onclick="closePdfDialog()">关闭介绍页</button>
+</div>
+
+<!-- 对话框 -->
+<div id="aboutDialog">
+    <h1 class="main-title">关于</h1>
+    
+    <div id="information"></div>
+    
+    <div class="aboutClose" id="aboutClose">
+        <button class="close-button" onclick="closeDialog(aboutDialog)">关闭</button>
+    </div>
+</div>
+
+
+
+<!-- Sidebar -->
+<div id="sidebar">
+<h1 class="main-title">菜单栏</h1>
+<ul class="menu">
+  <li class="menu-item" id="go-to-home-page">
+    <span class="menu-text" >前往主页</span>
+  </li>
+  <li class="menu-item" id="openDialog">
+    <span class="menu-text">管理分析脚本</span>
+  </li>
+  <li class="menu-item" id="showInstruction">
+    <span class="menu-text">显示说明文档</span>
+  </li>
+  <li class="menu-item">
+    <span class="menu-text" onclick="showUpdateLog()">关于</span>
+  </li>
+  <button id="bottomSpan" onclick="updateSys()">系统更新</button>
+</ul>
+</div>
+
+<div id="right-sidebar">
+    <h1 class="main-title" style="padding: 20px;">上传文件历史</h1>
+    {% macro render_directory(directory, depth=0) %}
+        <ul style="padding-left: 0;">
+            {% for name, item in directory.items()|reverse %}
+                {% set indent = "&nbsp;" * (depth * 4) %}
+                {% if item is mapping %}
+                    <li class="folder" style="padding-right: 40px;">{{ indent|safe }}<span class="triangle"></span>{{ name }}</li>
+                    <li>
+                        {{ render_directory(item, depth + 1) }}
+                    </li>
+                {% else %}
+                    <li class="file">{{ indent|safe }}- <a href="/download_log/{{ item }}" style="padding-right: 40px;" target="_blank">{{ name }}</a></li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+    {% endmacro %}
+
+    {{ render_directory(files_structure) }}
+</div>
+
+    
+    
+  
+
+</body>
+<script src="{{ url_for('static', filename="scripts.js") }}"></script>
+
+
+
+</html>
