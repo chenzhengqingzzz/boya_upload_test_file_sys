@@ -34,10 +34,12 @@ def get_filePath_list(raw_path,file_list = []):
     return file_list
 
 def get_file_data(file_path):
-    rename_flag = 0
+    ATE = 'PK2'
+    rename_flag = 1
     # rename = ['FIB7(DRV100%)','FIB7(DRV100%)','FIB15(DRV75%)','FIB15(DRV75%)','noFIB','noFIB','noFIB','noFIB']
     # rename = ['FIB27#10','FIB27#13','FIB28#6','FIB28#7','noChip','noChip','noChip','noChip']
-    rename = ['noFIB','noFIB','noFIB','noFIB','FIB23#34','FIB23#35','FIB27#41','FIB27#47','PY128','noChip','noChip','noChip']
+    rename = ['fuseE0-2','fuseE0-2','fuseE0-2','fuseE0-2','fuseE4','fuseE4','fuseE4','fuseE4']
+    # rename = ['noFIB','noFIB','noFIB','noFIB','FIB23#34','FIB23#35','FIB27#41','FIB27#47','PY128','noChip','noChip','noChip']
     DATAlist = {}
     FreqMAXList = {}
     rows_list = {}
@@ -58,7 +60,7 @@ def get_file_data(file_path):
         #Failing DUTs 0x0, Dut 0, 1.60 V, 10.00 MHz, 0x0000 PASS!!
         #searchObj = re.match(r".*Failing.*, Dut (.*) .* ns, (.*) V, (.*) MHz, (.*)!!", line)
         #searchObj = re.match(r".*Failing.*, Dut (.*), (.*) V, (.*) MHz, (.*)!!", line)
-        searchObj = re.match(r".*Failing.*, Dut ([\d+]).*, (.*) V, (.*) MHz, (.*)!!", line)
+        searchObj = re.match(r".*Failing.*, Dut (\d+).*, (.*) V, (.*) MHz, (.*)!!", line)
         #searchObj = re.match(r".*Failing.*, Dut (.*), (.*) V, (.*) MHz (.*)!!", line)
         #Failing DUTs 0x0, Dut 0, VCC_brownout 0.0 V, delay_time 150.00 ms, PASS!!
         #searchObj = re.match(r".*Failing.*, Dut ([\d+]).*, VCC_brownout (.*) V, delay_time (.*) ms, (.*)!!", line)
@@ -90,11 +92,14 @@ def get_file_data(file_path):
             #         FreqMAXList.update({testname:{}})
             #         rows_list.update({testname:[]})
         if searchObj:
-            dut = int(searchObj.group(1)) + 4 * int(re.findall(r"_s(\d)\.txt", file)[-1])
+            if ATE == 'M2':
+                dut = int(searchObj.group(1)) + 16 * int(re.findall(r"_s(\d)\.txt", file)[-1])   #M2
+            else:
+                dut = int(searchObj.group(1)) + 4 * int(re.findall(r"_s(\d)\.txt", file)[-1])
             # if dut < 1 or dut > 3:
             #     continue
             if rename_flag:
-                dut = '%s-Dut%d'%(rename[dut],dut)
+                dut = '%s#Dut%d'%(rename[dut],dut)
             else:
                 dut = 'Dut%d'%dut
            # tv = searchObj.group(2) + 'ns'
@@ -186,18 +191,24 @@ def PrinttFreqMAX(ExcelWrite,row_list,FreqMAXList):
     for mode in FreqMAXList:
         for testname in FreqMAXList[mode]:
             # worksheet.write(row, col, mode +'-'+ testname, format1)
-            worksheet.write(row, col, testname, format1)
+            worksheet.write(row, col, fixDummy(testname), format1)
             flag = 1
             row += 1
             chart_col = workbook.add_chart({'type': 'line'})
             # del FreqMAXList[mode][testname]['Dut3']
             # del FreqMAXList[mode][testname]['Dut4']
             # del FreqMAXList[mode][testname]['Dut5']
-            for i,dut in enumerate(FreqMAXList[mode][testname]):
+            for k,dut in enumerate(FreqMAXList[mode][testname]):
+                if len(FreqMAXList[mode][testname])>8:
+                    i = k
+                else:
+                    i = int(re.search(r'(Dut|DUT|dut)(\d+)', dut)[2])
                 # if i>1:
                 #     continue
                 worksheet.write(row + i + 1, col + 0, dut)
-                if not i:
+                # if not i:
+                #     MAX_col = len(FreqMAXList[mode][testname][dut])
+                if not k:
                     MAX_col = len(FreqMAXList[mode][testname][dut])
                 for j,vcc in enumerate(FreqMAXList[mode][testname][dut]):
                     if flag:
@@ -205,6 +216,10 @@ def PrinttFreqMAX(ExcelWrite,row_list,FreqMAXList):
                     if FreqMAXList[mode][testname][dut][vcc] == 'MAX':
                         FreqMAXList[mode][testname][dut][vcc] = float(row_list[testname][-1].replace('MHz',''))
                     worksheet.write(row + i + 1, col + j + 1, FreqMAXList[mode][testname][dut][vcc])
+                    # if not (('HT' in testname and dut == 'Dut1') or ('LT' in testname and dut == 'Dut3') or ('RT' in testname and (dut == 'Dut3' or dut == 'Dut4'))):
+                    #     worksheet.write(row + i + 1, col + j + 1, FreqMAXList[mode][testname][dut][vcc])
+                    # if not (('RT' in testname and (dut == 'Dut2'))):
+                    #     worksheet.write(row + i + 1, col + j + 1, FreqMAXList[mode][testname][dut][vcc])
                 # 配置第一个系列数据
                 chart_col.add_series({
                     'name':'=FreqMAXList!'+convert_to_string(col)+str(row+i+2),
@@ -215,11 +230,11 @@ def PrinttFreqMAX(ExcelWrite,row_list,FreqMAXList):
                 
             # 设置图表的title 和 x，y轴信息
             # chart_col.set_title({'name':mode +'-'+ testname})
-            chart_col.set_title({'name': testname})
+            chart_col.set_title({'name': fixDummy(testname)})
             chart_col.set_x_axis({'name':'VCC (V)'})
             # chart_col.set_x_axis({'name':'tV (V)'})
             chart_col.set_y_axis({'name':'Freq (MHz)'})
-            chart_col.set_size({'height':12*18,'width':8*64})
+            chart_col.set_size({'height':(len(FreqMAXList[mode][testname])+4)*18,'width':8*64})
             
             # 设置图表的风格
             chart_col.set_style(2)
@@ -284,6 +299,24 @@ def set_excel_style(writer,sheet_name,startrow,startcol,endrow,endcol,dut,testna
             worksheet.write(startrow - 1, startcol + 2 + i, tvlist[testname][vcc])
     #worksheet.set_column('B:B',12,format1)
 
+def fixDummy(testname):
+    flag=0
+    if not flag:
+        return testname
+    if 'volt_freq' in testname:
+        return testname
+    if 'SPI' in testname:
+        if 'DTR' in testname:
+            return re.sub(r"_dummy_(\d+)", lambda x: "_dummy_%d"%(int(x.group(1))+1), testname)
+        if ('dualio' in testname or 'dio' in testname or 'quadio' in testname or 'qio' in testname)\
+            and ('continue' in testname or 'ctn' in testname):
+            return re.sub(r"_dummy_(\d+)", lambda x: "_dummy_%d"%(int(x.group(1))+2), testname)
+    if 'QPI' in testname:
+        return re.sub(r"reg_(.*)h_dummy_(\d+)", 
+                       lambda x: "reg_%02xh_dummy_%d" % (int(x.group(1), 16), ((int(x.group(1), 16) & 0x70) >> 4) * 2 + 4), 
+                       testname)
+    return testname
+
 def data_to_excel(ExcelWrite,DATAlist,row_list,row_list2,FreqMAXList,tvlist):
     for mode in DATAlist:
         start_col = 1
@@ -309,12 +342,18 @@ def data_to_excel(ExcelWrite,DATAlist,row_list,row_list2,FreqMAXList,tvlist):
                 # start_col = j * (df.shape[1] + 3) + 1
                 end_row = start_row + df.shape[0] + 1
                 end_col = start_col + df.shape[1] + 1
-                set_excel_style(ExcelWrite, sheetname, start_row, start_col, end_row, end_col, dut, testname, tvlist)
+                # set_excel_style(ExcelWrite, sheetname, start_row, start_col, end_row, end_col, dut, testname, tvlist)
+                set_excel_style(ExcelWrite, sheetname, start_row, start_col, end_row, end_col, dut, fixDummy(testname), tvlist)
             start_col += (df.shape[1] + 3)
     PrinttFreqMAX(ExcelWrite,row_list2,FreqMAXList)
     # ExcelWrite.save()
     ExcelWrite.close()
-    
+
+def custom_sort_key(file_path):
+    parts = re.split(r'(\d+)', os.path.basename(file_path))
+    parts = [int(part) if part.isdigit() else part for part in parts]
+    return parts
+
 if __name__ == '__main__':
     DATAlist_all = {}
     FreqMAXList_all = {}
@@ -329,6 +368,7 @@ if __name__ == '__main__':
     #file_path = filedialog.askopenfilename()
     file_path = filedialog.askdirectory()
     file_list = get_filePath_list(file_path)
+    file_list.sort(key=custom_sort_key)
     flielist_cmp = copy.deepcopy(file_list)
     for file in file_list:
         #try:
@@ -389,7 +429,7 @@ if __name__ == '__main__':
                 DATAlist_tmp = {}
                 FreqMAXList_tmp = {}
             if all(filepath not in file_cmp for file_cmp in flielist_cmp) and (file_path in filepath):
-                ExcelWrite_all = pd.ExcelWriter(filepath + r'/' + shotname + r'.xlsx')
+                ExcelWrite_all = pd.ExcelWriter(filepath + r'/' + shotname + r'_all.xlsx')
                 data_to_excel(ExcelWrite_all,DATAlist_all,row_list,row_list2,FreqMAXList_all,tvlist_tmp)
                 DATAlist_all = {}
                 FreqMAXList_all = {}

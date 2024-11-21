@@ -13,8 +13,6 @@ import tkinter as tk
 import pandas as pd
 import pandas.io.formats.excel
 
-bestflag = 0
-
 def get_filePath_fileName_fileExt(filename):
     (filepath, tempfilename) = os.path.split(filename)
     (shotname, extension) = os.path.splitext(tempfilename)
@@ -33,6 +31,8 @@ def get_filePath_list(raw_path,file_list = []):
 
 def get_file_data(file_path):
     global bestflag
+    rename_flag = 0
+    rename = ['FIB2#Dut0','FIB2#Dut1','noFIB#Dut2','noFIB#Dut3','noFIB#Dut4','noFIB#Dut5','noFIB#Dut6','noFIB#Dut7']
     DATAlist = {}
     DATAlist_tv = {}
     bestlist_tv = {}
@@ -44,11 +44,18 @@ def get_file_data(file_path):
     for line in lines:
        # 40.0MHz QuadIO read 0F, VCC 1.6 V, VIH 1.0, VIL 0.0, tCLQV 8.1 ns, FAIL!!
        # Failing DUTs 0xf, Dut 0 40.0MHz compare_jedec_id_test, VCC 1.6 V, VIH 1.0, VIL 0.0, tCLQV 5.0 ns, FAIL!!
-       searchObj = re.match(r'.*Failing.*, Dut (.*) .*MHz (.*), VCC (.*) V, VIH 1.0, VIL 0.0, tCLQV (.*) ns, (.*)!!',line)
+       # Failing DUTs 0xf, Dut 0 40.0MHz QuadIO read 0F, VCC 1.60 V, VIH 1.00, VIL 0.00, tCLQV 1.0 ns, FAIL!!
+       searchObj = re.match(r'.*Failing.*, Dut (.*) .*MHz (.*), VCC (.*) V, VIH .*, VIL .*, tCLQ. (.*) ns, (.*)!!',line)
        # Failing DUTs 0xf, Dut 0 50MHz, eng_sec_erase_rd_ff, VCC 1.60 V, tCSH 0 ns, FAIL!!
        #searchObj = re.match(r'.*Failing.*, Dut (.*) *50MHz, (.*), VCC (.*) V, tCSH (.*) ns, (.*)!!',line)
        if searchObj:
-           dut = searchObj[1]
+           dut = int(searchObj.group(1)) + 4 * int(re.findall(r"_s(\d)\.txt", file)[-1])
+           # if dut < 1 or dut > 3:
+           #     continue
+           if rename_flag:
+               dut = '%s'%(rename[dut])
+           else:
+               dut = 'Dut%d'%dut
            testname = searchObj[2]
            vcc = searchObj[3]+'V'
            tCLQV = float(searchObj[4])
@@ -105,6 +112,7 @@ def PrinttCLQV(ExcelWrite,DATAlist_tv,bestlist_tv,freqlist_tv):
     workbook = ExcelWrite.book
     format1 = workbook.add_format({'bold': True,'valign': 'vcenter','font_size': 14,'text_wrap':0})
     format2 = workbook.add_format({'bold': True,'valign': 'vcenter','text_wrap':0})
+    format3 = workbook.add_format({'bold': 0, 'valign': 'vcenter', 'font_size': 11, 'text_wrap': 0, 'num_format': '0.0'})
     df = pd.DataFrame()
     df.to_excel(ExcelWrite, sheet_name = 'DATAlist_tv')
     worksheets = ExcelWrite.sheets
@@ -115,22 +123,30 @@ def PrinttCLQV(ExcelWrite,DATAlist_tv,bestlist_tv,freqlist_tv):
         row += 1
         chart_col = workbook.add_chart({'type': 'line'})
         for i,dut in enumerate(DATAlist_tv[testname]):
-            worksheet.write(row + i + 1, col + 0, 'Dut%d'%int(dut))
+            if type(dut) == str:
+                worksheet.write(row + i + 1, col + 0, dut)
+            else:
+                worksheet.write(row + i + 1, col + 0, 'Dut%d'%int(dut))
             if bestflag:
                 if i==0:
                     worksheet.write(row-1, col + len(DATAlist_tv[testname][dut]) + 13, 'MaxFreqTv_'+testname, format1)
                     worksheet.write(row-1, col + 2*len(DATAlist_tv[testname][dut]) + 16, 'MaxFreq_'+testname, format1)
-                worksheet.write(row + i + 1, col + 0 + len(DATAlist_tv[testname][dut]) + 13, 'Dut%d'%int(dut))
-                worksheet.write(row + i + 1, col + 0 + 2*len(DATAlist_tv[testname][dut]) + 16, 'Dut%d'%int(dut))
+                if type(dut) == str:
+                    worksheet.write(row + i + 1, col + 0 + len(DATAlist_tv[testname][dut]) + 13, '%s'%(dut))
+                    worksheet.write(row + i + 1, col + 0 + 2*len(DATAlist_tv[testname][dut]) + 16, '%s'%(dut))
+                else:
+                    worksheet.write(row + i + 1, col + 0 + len(DATAlist_tv[testname][dut]) + 13, 'Dut%d'%(dut))
+                    worksheet.write(row + i + 1, col + 0 + 2*len(DATAlist_tv[testname][dut]) + 16, 'Dut%d'%(dut))
+                    
             for j,vcc in enumerate(DATAlist_tv[testname][dut]):
                 if flag:
                     worksheet.write(row, col + j + 1, vcc,format2)
-                worksheet.write(row + i + 1, col + j + 1, DATAlist_tv[testname][dut][vcc])
+                worksheet.write(row + i + 1, col + j + 1, DATAlist_tv[testname][dut][vcc],format3)
                 if bestflag:
                     if flag:
                         worksheet.write(row, col + j + 1 + len(DATAlist_tv[testname][dut]) + 13, vcc,format2)
                         worksheet.write(row, col + j + 1 + 2*len(DATAlist_tv[testname][dut]) + 16, vcc,format2)
-                    worksheet.write(row + i + 1, col + j + 1 + len(DATAlist_tv[testname][dut]) + 13, bestlist_tv[testname][dut][vcc])
+                    worksheet.write(row + i + 1, col + j + 1 + len(DATAlist_tv[testname][dut]) + 13, bestlist_tv[testname][dut][vcc],format3)
                     worksheet.write(row + i + 1, col + j + 1 + 2*len(DATAlist_tv[testname][dut]) + 16, freqlist_tv[testname][dut][vcc])
             # 配置第一个系列数据
             chart_col.add_series({
@@ -150,6 +166,7 @@ def PrinttCLQV(ExcelWrite,DATAlist_tv,bestlist_tv,freqlist_tv):
         
         # 把图表插入到worksheet并设置偏移
         worksheet.insert_chart(convert_to_string(col+len(DATAlist_tv[testname][dut])+3)+str(row), chart_col, {'x_offset': 0, 'y_offset': 0})
+        
         row += i + 3
     workbook.close()
 
@@ -171,7 +188,7 @@ def set_excel_style(writer,sheet_name,startrow,startcol,endrow,endcol,dut,testna
     worksheet = worksheets[sheet_name]
     #worksheet.hide_gridlines(option=2)
     workbook = writer.book  
-    format1 = workbook.add_format({'bold': True,'align': 'center','valign': 'vcenter','font_size': 48,'text_wrap':1})
+    format1 = workbook.add_format({'bold': True,'align': 'center','valign': 'vcenter','font_size': 24,'text_wrap':1})
     red_format = workbook.add_format({'bg_color':'FFC7CE','align': 'center','valign': 'vcenter'})
     green_format = workbook.add_format({'bg_color':'C6EFCE','align': 'center','valign': 'vcenter'})
     worksheet.conditional_format(convert_to_string(startcol)+str(startrow+3)+':'+convert_to_string(endcol)+str(endrow+1), 
@@ -231,54 +248,26 @@ def data_to_excel(ExcelWrite,DATAlist,rows_list,DATAlist_tv_tmp,bestlist_tv,freq
 def renamefilelist(filelist):
     newfilelist = []
     for file in filelist:
-        newfile = file.replace('_test_','_')
+        filepath, filename = os.path.split(file)
+        newfile = filename.replace('_test_','_')
         newfile = newfile.replace('_double_','_')
         newfile = newfile.replace('_compare_','_')
         newfile = newfile.replace('_chip_','_')
         if ('random' in file) or ('by32' in file):
             newfile = newfile.replace('_random_','_')
-            newfile = newfile.replace('tCLQV_','tCLQV_random_')
-        os.rename(file,newfile)
+        if newfile != filename:
+            newfile = os.path.join(filepath, newfile)
+            os.rename(file, newfile)
         newfilelist.append(newfile)
     return newfilelist
 
-def main(file_path):
-    OutFileList = []
-    DATAlist_tmp = {}
-    DATAlist_tv_tmp = {}
-    bestlist_tv_tmp = {}
-    freqlist_tv_tmp = {}
-    rows_list = {}
-    file_list = get_filePath_list(file_path)
-    file_list = renamefilelist(file_list)
-    file_list = get_filePath_list(file_path,file_list = [])
-    flielist_cmp = copy.deepcopy(file_list)
-    for file in file_list:
-        print(file)
-        filepath, shotname, extension = get_filePath_fileName_fileExt(file)
-        shotname = shotname.replace(re.findall(r"(_s[\d]{1,})\.txt", file)[0],'')
-        #shotname = shotname.replace(re.findall(r"\.txt", file)[0],'')
-        testname = [shotname]
-        DATAlist_tv,DATAlist,rows,bestlist_tv,freqlist_tv = get_file_data(file)
-        if rows != []:
-            rows_list.update({shotname:rows})
-            DATAlist_tmp = combine_DATAlist(DATAlist_tmp,DATAlist,testname)
-            DATAlist_tv_tmp = combine_DATAlist(DATAlist_tv_tmp,DATAlist_tv,testname)
-            bestlist_tv_tmp = combine_DATAlist(bestlist_tv_tmp,bestlist_tv,testname)
-            freqlist_tv_tmp = combine_DATAlist(freqlist_tv_tmp,freqlist_tv,testname)
-        del flielist_cmp[0]
-        if all(filepath not in file_cmp for file_cmp in flielist_cmp):
-            pandas.io.formats.excel.header_style = None
-            dest_filename = filepath + r'/' + shotname + r'.xlsx'
-            ExcelWrite = pd.ExcelWriter(dest_filename)
-            try:
-                data_to_excel(ExcelWrite,DATAlist_tmp,rows_list,DATAlist_tv_tmp,bestlist_tv_tmp,freqlist_tv_tmp)
-                OutFileList.append(dest_filename)
-            finally:
-                ExcelWrite.close()
-    return OutFileList
+def custom_sort_key(file_path):
+    parts = re.split(r'(\d+)', os.path.basename(file_path))
+    parts = [int(part) if part.isdigit() else part for part in parts]
+    return parts
 
 if __name__ == '__main__':
+    bestflag = 0
     DATAlist_tmp = {}
     DATAlist_tv_tmp = {}
     bestlist_tv_tmp = {}
@@ -290,6 +279,7 @@ if __name__ == '__main__':
     file_list = get_filePath_list(file_path)
     file_list = renamefilelist(file_list)
     file_list = get_filePath_list(file_path,file_list = [])
+    file_list.sort(key=custom_sort_key)
     flielist_cmp = copy.deepcopy(file_list)
     for file in file_list:
         print(file)

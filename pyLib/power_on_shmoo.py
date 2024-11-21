@@ -29,7 +29,7 @@ delay_end1 = 498
 
 delay_start2 = 5
 delay_inc2 = 5
-delay_end2 = 995
+delay_end2 = 1000
 
 test_num = 6
 

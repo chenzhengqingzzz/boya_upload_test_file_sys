@@ -18,7 +18,7 @@ my $chipsum=0;
 
 my @filename = glob("*.txt"); 
 
-my $xl = Excel::Writer::XLSX->new("block_erase_cycling.xlsx");
+my $xl = Excel::Writer::XLSX->new("sector_erase_cycling.xlsx");
 
 my $xlsheet = $xl->add_worksheet("Sheet1");
 
@@ -39,7 +39,7 @@ for (@filename){
     print "$file\n";
     
 while($line=<TXT>){
-	if($line=~m/AA\s2C\s.*55\s(?<cyc_t>\d+)ms/){
+	if($line=~m/AA\s28\s.*55\s(?<cyc_t>\d+)ms/){
 		$cyc_t = $+{cyc_t};
 		push @time_array,$cyc_t;
 		

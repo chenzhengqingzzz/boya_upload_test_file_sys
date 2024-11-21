@@ -64,8 +64,8 @@ def get_file_data(file_path,testname2):
                 DATAlist.update({testname:{}})
                 rows_list.update({testname:[]})
                 Ireflist.update({testname:{}})
-            # if float(searchObj['vcc'])<2.6:
-            #     continue
+            if float(searchObj['vcc'])<1.6:   #for margin vcc start control
+                continue
             dut = searchObj['dut']
             rdv = searchObj['rdv']
             # tv = searchObj['tv'] + 'ns'
@@ -139,7 +139,7 @@ def set_excel_style(writer,sheet_name,startrow,startcol,endrow,endcol,dut,printl
     worksheet = worksheets[sheet_name]
     #worksheet.hide_gridlines(option=2)
     workbook = writer.book
-    format1 = workbook.add_format({'bold': True,'align': 'center','valign': 'vcenter','font_size': 36,'text_wrap':0})
+    format1 = workbook.add_format({'bold': True,'align': 'center','valign': 'vcenter','font_size': 90,'text_wrap':0})
     red_format = workbook.add_format({'bg_color':'FFC7CE','align': 'center','valign': 'vcenter'})
     green_format = workbook.add_format({'bg_color':'C6EFCE','align': 'center','valign': 'vcenter'})
     worksheet.conditional_format(convert_to_string(startcol)+str(startrow+3)+':'+convert_to_string(endcol)+str(endrow),
@@ -307,7 +307,7 @@ def PrintSummary(ExcelWrite, Marginlist, vcc_list,rename_flag,rename):
     worksheet.set_column('C:E', 18)
     
 def data_to_excel(dest_filename,DATAlist,rows,vcc_list,rename_flag,rename):
-    err = 30.0
+    err = 50.0  #default 30, for margin Windows calc
     Freqlimit = 0.0
     Marginlist = {}
     ExcelWrite = pd.ExcelWriter(dest_filename)
@@ -365,8 +365,8 @@ if __name__ == '__main__':
     # EQ = [ 8.60, 4.80, 5.30, 5.80, 6.30, 6.80, 7.40, 8.00, 9.20, 9.80, 10.50, 11.20, 11.80, 12.60, 13.30, 14.00 ] #BY25Q128EL
     # EQ = [17.000, 10.000, 11.000, 12.000, 13.000, 14.000, 15.000, 16.000, 18.000, 19.000, 20.000, 21.000, 22.000, 23.000, 24.000, 26.000]
     # EQ = [4.000, 4.000, 4.900, 4.900 ,5.800, 5.800, 6.700, 6.700, 7.600, 7.600, 8.500, 8.500, 9.400, 9.400, 10.300, 10.300]
-    EQ = [12.1, 7.0, 7.7, 8.3, 9.1, 9.8, 10.5, 11.3, 12.9, 13.7, 14.6, 15.4, 16.3, 17.2, 18.2, 19.1 ]#BY25FQ256FS
-    # EQ = [6.00, 16.0, 30.0, 35.0 ]#BY25D20EW
+    # EQ = [12.1, 7.0, 7.7, 8.3, 9.1, 9.8, 10.5, 11.3, 12.9, 13.7, 14.6, 15.4, 16.3, 17.2, 18.2, 19.1 ]#BY25FQ256FS
+    EQ = [5.4, 5.4, 27.1, 27.1 ]#BY25D20EW
     rename_flag = 0
     rename = ['FIB12','FIB12','FIB13','FIB13','FIB14','noFIB','noFIB','noFIB']
     # rename = ['FIB7(DRV100%)','FIB7(DRV100%)','FIB15(DRV75%)','FIB15(DRV75%)','noFIB','noFIB','noFIB','noFIB'] 
@@ -385,10 +385,10 @@ if __name__ == '__main__':
             testname = testname.replace('quadio_read_by32byte','qio_by32')
             # SENSE = [11.500, 11.500, 13.000, 13.000, 14.500, 14.500, 16.000, 16.000, 17.500, 17.500, 19.000, 19.000, 20.500, 20.500, 22.000, 22.000]
             # SENSE = [17.000, 10.000, 11.000, 12.000, 13.000, 14.000, 15.000, 16.000, 18.000, 19.000, 20.000, 21.000, 22.000, 23.000, 24.000, 26.000]
-            SENSE = [21.9, 13.4, 14.5, 15.7, 16.9, 18.1, 19.4, 20.1, 23.1, 24.4, 25.7, 27.0, 28.3, 29.6, 31.0, 32.3 ]#BY25FQ256FS
+            # SENSE = [21.9, 13.4, 14.5, 15.7, 16.9, 18.1, 19.4, 20.1, 23.1, 24.4, 25.7, 27.0, 28.3, 29.6, 31.0, 32.3 ]#BY25FQ256FS
             # SENSE = [20.10, 11.90, 13.10, 14.20, 15.40, 16.50, 17.70, 18.90, 21.30, 22.50, 23.80, 25.00, 26.20, 27.40, 28.70, 30.00 ]  #BY25Q128EL
             # SENSE = [20.880, 20.880, 24.192, 24.192, 27.504, 27.504, 30.816, 30.816, 34.128, 34.128, 36.000, 36.000, 39.312, 39.312, 43.920, 43.920 ]#BY25Q80ES RC
-            # SENSE = [ 11.200, 22.510, 34.600, 40.800 ]#BY25D20EW
+            SENSE = [ 11.200, 22.510, 34.600, 40.800 ]#BY25D20EW
             # if 'RC' in testname:
             #     SENSE = [14.500, 14.500, 16.800, 16.800, 19.100, 19.100, 21.400, 21.400, 23.700, 23.700, 25.000, 25.000, 27.300, 27.300, 30.500, 30.500]
             # elif 'CLK' in testname:

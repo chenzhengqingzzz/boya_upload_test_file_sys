@@ -26,7 +26,6 @@ my $rptheader = $xl->add_format(); # Add a format
 $rptheader->set_bold();
 $rptheader->set_size('12');
 $rptheader->set_font('Century Gothic');
-#添加格式（表内容）
 my $normcell = $xl->add_format(); # Add a format
 $normcell->set_size('11');
 
