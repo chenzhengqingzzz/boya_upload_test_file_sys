@@ -44,7 +44,7 @@ EXPOSE 5000
 CMD ["python", "app.py"]
 
 # cd /boya_upload_test_file_sys
-# docker build -t boya_upload_test_file_sys .
+# docker build --no-cache -t boya_upload_test_file_sys .
 # 根据存放凭证的文件夹修改路径
 # docker run --privileged -d --name boya_upload_test_file_sys -p 80:80 -v /credentials:/credentials --restart always 192.168.2.143:5000/boya_upload_test_file_sys
 # sudo mount -t cifs //192.168.2.108/fileserver /Z -o credentials=/credentials/info.txt,vers=3.0,sec=ntlmssp,iocharset=utf8
