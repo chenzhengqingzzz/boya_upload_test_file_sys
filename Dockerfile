@@ -29,7 +29,6 @@ RUN mkdir /Z
 # 创建凭证文件夹 info为txt文件
 RUN mkdir credentials
 
-
 # 设置时区为北京时间
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo "Asia/Shanghai" > /etc/timezone
 
@@ -56,7 +55,6 @@ CMD ["python", "app.py"]
 # 查询仓库镜像 http://192.168.2.143:5000/v2/_catalog
 # docker清除缓存：docker builder prune
 # 清理所有未使用的资源：docker system prune -a
-
 
 # 5000 registry
 # 9000 管理docker
