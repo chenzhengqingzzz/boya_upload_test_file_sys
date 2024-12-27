@@ -3,9 +3,9 @@ Author: czqczqzzzzzz(czq)
 Email: tenchenzhengqing@qq.com
 Date: 2024-11-28 09:12:30
 LastEditors: by-czq
-LastEditTime: 2024-11-28 09:44:17
-FilePath: \boya_upload_test_file_sys\pyLib\final_handle_3fabs_v4.py
-Description: v4 处理fab厂WATER良率(.xlsx) 数据log(.csv/.WAT) 各自并生成HTML报告 已经支持SMIC/XMC/HLMC三家 支持横向对比汇总图表 支持凸显想要的图表 优化性能
+LastEditTime: 2024-12-27 09:15:26
+FilePath: \boya_upload_test_file_sys\pyLib\handle_3fabs_revA.py
+Description: v5A 处理fab厂WATER良率(.xlsx) 数据log(.csv/.WAT) 各自并生成HTML报告 已经支持SMIC/XMC/HLMC三家 支持横向对比汇总图表 支持凸显想要的图表 优化性能，上图坐标正确，但下图坐标需要看个位数，中间没有分bin，点击图例可以控制所有子图
 
 Copyright (c) by czqczqzzzzzz(czq), All Rights Reserved.
 '''
